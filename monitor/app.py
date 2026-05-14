@@ -9,6 +9,7 @@ def monitor():
     servicios = {}
 
     lista = {
+        "gateway": "http://gateway:5004/health",
         "pedidos": "http://pedidos:5000/health",
         "inventario": "http://inventario:5001/health",
         "pagos": "http://pagos:5002/health"
