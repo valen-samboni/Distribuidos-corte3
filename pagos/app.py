@@ -1,39 +1,53 @@
 from flask import Flask, jsonify
 import logging
-import random
 import time
 
 app = Flask(__name__)
 
+# MONITOREO — logs del servicio
 logging.basicConfig(level=logging.INFO)
+
+# METRICAS — contador de errores
+errores = 0
+
 
 @app.route('/')
 def pagos():
+
+    global errores
 
     inicio = time.time()
 
     logging.info("Procesando pago")
 
-    falla = random.choice([True, False])
+    try:
 
-    if falla:
+        # MONITOREO — simulacion de tiempo de respuesta
+        time.sleep(1)
 
-        logging.error("Error en el servicio de pagos")
+        tiempo = time.time() - inicio
+
+        logging.info(f"Pago procesado en {tiempo:.2f} segundos")
 
         return jsonify({
-            "error": "Servicio de pagos caído"
+            "pago": "exitoso",
+            "tiempo_respuesta": f"{tiempo:.2f} segundos",
+            "errores": errores
+        })
+
+    except Exception as e:
+
+        errores += 1
+
+        logging.error(f"Error en pagos: {str(e)}")
+
+        return jsonify({
+            "error": "Error en pagos",
+            "errores": errores
         }), 500
 
-    tiempo = time.time() - inicio
 
-    logging.info(f"Pago procesado en {tiempo:.2f} segundos")
-
-    return jsonify({
-        "pago": "exitoso",
-        "tiempo_respuesta": f"{tiempo:.2f} segundos"
-    })
-
-
+# HEALTH CHECK
 @app.route('/health')
 def health():
 

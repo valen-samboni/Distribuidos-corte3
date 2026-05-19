@@ -1,7 +1,13 @@
 from flask import Flask, jsonify
 import requests
+import time
+import logging
 
 app = Flask(__name__)
+
+# MONITOREO — logs del sistema
+logging.basicConfig(level=logging.INFO)
+
 
 @app.route('/monitor')
 def monitor():
@@ -17,24 +23,36 @@ def monitor():
 
     for nombre, url in lista.items():
 
+        inicio = time.time()
+
         try:
 
             respuesta = requests.get(url, timeout=2)
 
+            # METRICAS — tiempo de respuesta
+            tiempo = time.time() - inicio
+
+            logging.info(f"{nombre} activo")
+
             servicios[nombre] = {
-                "estado": respuesta.json(),
-                "codigo": respuesta.status_code
+                "estado": "activo",
+                "codigo": respuesta.status_code,
+                "tiempo_respuesta": f"{tiempo:.2f} segundos"
             }
 
-        except:
+        except Exception as e:
+
+            logging.error(f"{nombre} caido")
 
             servicios[nombre] = {
-                "estado": "caido"
+                "estado": "caido",
+                "error": str(e)
             }
 
     return jsonify(servicios)
 
 
+# HEALTH CHECK
 @app.route('/health')
 def health():
 

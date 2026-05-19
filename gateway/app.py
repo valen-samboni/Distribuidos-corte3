@@ -5,15 +5,21 @@ import time
 
 app = Flask(__name__)
 
+# MONITOREO — logs del gateway
 logging.basicConfig(level=logging.INFO)
 
-errores = 0
+# METRICAS
+errores_pagos = 0
+
+# CIRCUIT BREAKER
+circuit_breaker = False
+
 
 @app.route('/')
-
 def gateway():
 
-    global errores
+    global errores_pagos
+    global circuit_breaker
 
     inicio = time.time()
 
@@ -31,11 +37,25 @@ def gateway():
             timeout=3
         ).json()
 
-        pagos = requests.get(
-            "http://pagos:5002/",
-            timeout=3
-        ).json()
+        # CIRCUIT BREAKER
+        if circuit_breaker:
 
+            logging.warning("Circuit Breaker ACTIVADO para pagos")
+
+            pagos = {
+                "estado": "servicio de pagos deshabilitado temporalmente"
+            }
+
+        else:
+
+            logging.info("Consultando servicio pagos")
+
+            pagos = requests.get(
+                "http://pagos:5002/",
+                timeout=3
+            ).json()
+
+        # METRICAS — tiempo de respuesta
         tiempo = time.time() - inicio
 
         logging.info(f"Solicitud completada en {tiempo:.2f} segundos")
@@ -45,25 +65,34 @@ def gateway():
             "pedidos": pedidos,
             "inventario": inventario,
             "pagos": pagos,
-            "tiempo_respuesta": f"{tiempo:.2f} segundos",
-            "errores": errores
+            "circuit_breaker": circuit_breaker,
+            "errores_pagos": errores_pagos,
+            "tiempo_respuesta": f"{tiempo:.2f} segundos"
         })
 
     except Exception as e:
 
-        errores += 1
+        errores_pagos += 1
 
         logging.error(f"Error en gateway: {str(e)}")
-        logging.error(f"Errores acumulados: {errores}")
+        logging.error(f"Errores acumulados pagos: {errores_pagos}")
+
+        # CIRCUIT BREAKER
+        if errores_pagos >= 3:
+
+            circuit_breaker = True
+
+            logging.warning("Circuit Breaker ACTIVADO")
 
         return jsonify({
             "error": "Servicio no disponible",
-            "errores": errores
+            "errores_pagos": errores_pagos,
+            "circuit_breaker": circuit_breaker
         }), 500
 
 
+# HEALTH CHECK
 @app.route('/health')
-
 def health():
 
     return jsonify({
@@ -72,4 +101,15 @@ def health():
     })
 
 
+# METRICAS
+@app.route('/metricas')
+def metricas():
+
+    return jsonify({
+        "errores_pagos": errores_pagos,
+        "circuit_breaker": circuit_breaker
+    })
+
+
 app.run(host='0.0.0.0', port=5004)
+

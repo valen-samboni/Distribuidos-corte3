@@ -5,9 +5,12 @@ import time
 
 app = Flask(__name__)
 
+# MONITOREO — logs del servicio
 logging.basicConfig(level=logging.INFO)
 
+# METRICAS — contador de errores
 errores = 0
+
 
 @app.route('/')
 def pedidos():
@@ -20,6 +23,7 @@ def pedidos():
 
     try:
 
+        # MONITOREO — validacion de servicios
         inventario = requests.get(
             "http://inventario:5001/health",
             timeout=2
@@ -30,6 +34,7 @@ def pedidos():
             timeout=2
         ).json()
 
+        # METRICAS — tiempo de respuesta
         tiempo = time.time() - inicio
 
         logging.info(f"Pedido procesado en {tiempo:.2f} segundos")
@@ -55,6 +60,7 @@ def pedidos():
         }), 500
 
 
+# HEALTH CHECK
 @app.route('/health')
 def health():
 
@@ -65,3 +71,5 @@ def health():
 
 
 app.run(host='0.0.0.0', port=5000)
+
+

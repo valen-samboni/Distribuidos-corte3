@@ -1,30 +1,54 @@
-from flask import Flask, jsonify # type: ignore
+from flask import Flask, jsonify
 import logging
 import time
 
 app = Flask(__name__)
 
+# MONITOREO — logs del servicio
 logging.basicConfig(level=logging.INFO)
+
+# METRICAS — contador de errores
+errores = 0
+
 
 @app.route('/')
 def inventario():
+
+    global errores
 
     inicio = time.time()
 
     logging.info("Consultando inventario")
 
-    time.sleep(1)
+    try:
 
-    tiempo = time.time() - inicio
+        # MONITOREO — simulacion de tiempo de respuesta
+        time.sleep(1)
 
-    logging.info(f"Inventario consultado en {tiempo:.2f} segundos")
+        # METRICAS — tiempo de respuesta
+        tiempo = time.time() - inicio
 
-    return jsonify({
-        "inventario": "disponible",
-        "tiempo_respuesta": f"{tiempo:.2f} segundos"
-    })
+        logging.info(f"Inventario consultado en {tiempo:.2f} segundos")
+
+        return jsonify({
+            "inventario": "disponible",
+            "tiempo_respuesta": f"{tiempo:.2f} segundos",
+            "errores": errores
+        })
+
+    except Exception as e:
+
+        errores += 1
+
+        logging.error(f"Error en inventario: {str(e)}")
+
+        return jsonify({
+            "error": "Error en inventario",
+            "errores": errores
+        }), 500
 
 
+# HEALTH CHECK
 @app.route('/health')
 def health():
 
@@ -35,3 +59,4 @@ def health():
 
 
 app.run(host='0.0.0.0', port=5001)
+
