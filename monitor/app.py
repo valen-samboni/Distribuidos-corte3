@@ -1,5 +1,5 @@
-from flask import Flask, jsonify
-import requests
+from flask import Flask, jsonify # type: ignore
+import requests # type: ignore
 import time
 import logging
 
